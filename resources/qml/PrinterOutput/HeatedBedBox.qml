@@ -1,46 +1,46 @@
-// Copyright (c) 2017 Ultimaker B.V.
+// Copyright (c) 2022 Ultimaker B.V.
 // Cura is released under the terms of the LGPLv3 or higher.
 
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.1
-import QtQuick.Layouts 1.1
+import QtQuick 2.15
+import QtQuick.Controls 2.4
 
-import UM 1.2 as UM
+import UM 1.5 as UM
 import Cura 1.0 as Cura
 
 Item
 {
     implicitWidth: parent.width
-    height: visible ? UM.Theme.getSize("sidebar_extruder_box").height : 0
+    height: visible ? UM.Theme.getSize("print_setup_extruder_box").height : 0
     property var printerModel
+    property var connectedPrinter: Cura.MachineManager.printerOutputDevices.length >= 1 ? Cura.MachineManager.printerOutputDevices[0] : null
 
     Rectangle
     {
-        color: UM.Theme.getColor("sidebar")
+        color: UM.Theme.getColor("main_background")
         anchors.fill: parent
 
-        Label //Build plate label.
+        // Build plate label.
+        UM.Label
         {
             text: catalog.i18nc("@label", "Build plate")
-            font: UM.Theme.getFont("default")
-            color: UM.Theme.getColor("text")
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.margins: UM.Theme.getSize("default_margin").width
         }
 
-        Label //Target temperature.
+        // Target temperature.
+        UM.Label
         {
             id: bedTargetTemperature
             text: printerModel != null ? printerModel.targetBedTemperature + "°C" : ""
-            font: UM.Theme.getFont("small")
+            font: UM.Theme.getFont("default_bold")
             color: UM.Theme.getColor("text_inactive")
             anchors.right: parent.right
             anchors.rightMargin: UM.Theme.getSize("default_margin").width
             anchors.bottom: bedCurrentTemperature.bottom
 
-            MouseArea //For tooltip.
+            // For tooltip.
+            MouseArea
             {
                 id: bedTargetTemperatureTooltipArea
                 hoverEnabled: true
@@ -62,17 +62,18 @@ Item
                 }
             }
         }
-        Label //Current temperature.
+        // Current temperature.
+        UM.Label
         {
             id: bedCurrentTemperature
             text: printerModel != null ? printerModel.bedTemperature + "°C" : ""
-            font: UM.Theme.getFont("large")
-            color: UM.Theme.getColor("text")
+            font: UM.Theme.getFont("large_bold")
             anchors.right: bedTargetTemperature.left
             anchors.top: parent.top
             anchors.margins: UM.Theme.getSize("default_margin").width
 
-            MouseArea //For tooltip.
+            //For tooltip.
+            MouseArea
             {
                 id: bedTemperatureTooltipArea
                 hoverEnabled: true
@@ -94,7 +95,8 @@ Item
                 }
             }
         }
-        Rectangle //Input field for pre-heat temperature.
+        //Input field for pre-heat temperature.
+        Rectangle
         {
             id: preheatTemperatureControl
             color: !enabled ? UM.Theme.getColor("setting_control_disabled") : showError ? UM.Theme.getColor("setting_validation_error_background") : UM.Theme.getColor("setting_validation_ok")
@@ -114,7 +116,7 @@ Item
                 {
                     return false; //Can't preheat if not connected.
                 }
-                if (!connectedPrinter.acceptsCommands)
+                if (connectedPrinter == null || !connectedPrinter.acceptsCommands)
                 {
                     return false; //Not allowed to do anything.
                 }
@@ -166,7 +168,7 @@ Item
                     }
                 }
             }
-            Label
+            UM.Label
             {
                 id: unit
                 anchors.right: parent.right
@@ -175,7 +177,6 @@ Item
 
                 text: "°C";
                 color: UM.Theme.getColor("setting_unit")
-                font: UM.Theme.getFont("default")
             }
             TextInput
             {
@@ -185,35 +186,36 @@ Item
                 selectByMouse: true
                 maximumLength: 5
                 enabled: parent.enabled
-                validator: RegExpValidator { regExp: /^-?[0-9]{0,9}[.,]?[0-9]{0,10}$/ } //Floating point regex.
+                validator: RegularExpressionValidator { regularExpression: /^-?[0-9]{0,9}[.,]?[0-9]{0,10}$/ } //Floating point regex.
                 anchors.left: parent.left
                 anchors.leftMargin: UM.Theme.getSize("setting_unit_margin").width
                 anchors.right: unit.left
                 anchors.verticalCenter: parent.verticalCenter
                 renderType: Text.NativeRendering
 
-                Component.onCompleted:
+                text:
                 {
                     if (!bedTemperature.properties.value)
                     {
-                        text = "";
+                        return "";
                     }
                     if ((bedTemperature.resolve != "None" && bedTemperature.resolve) && (bedTemperature.stackLevels[0] != 0) && (bedTemperature.stackLevels[0] != 1))
                     {
                         // We have a resolve function. Indicates that the setting is not settable per extruder and that
                         // we have to choose between the resolved value (default) and the global value
                         // (if user has explicitly set this).
-                        text = bedTemperature.resolve;
+                        return bedTemperature.resolve;
                     }
                     else
                     {
-                        text = bedTemperature.properties.value;
+                        return bedTemperature.properties.value;
                     }
                 }
             }
         }
 
-        Button // The pre-heat button.
+        // The pre-heat button.
+        Cura.SecondaryButton
         {
             id: preheatButton
             height: UM.Theme.getSize("setting_control").height
@@ -245,96 +247,20 @@ Item
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: UM.Theme.getSize("default_margin").width
-            style: ButtonStyle {
-                background: Rectangle
-                {
-                    border.width: UM.Theme.getSize("default_lining").width
-                    implicitWidth: actualLabel.contentWidth + (UM.Theme.getSize("default_margin").width * 2)
-                    border.color:
-                    {
-                        if(!control.enabled)
-                        {
-                            return UM.Theme.getColor("action_button_disabled_border");
-                        }
-                        else if(control.pressed)
-                        {
-                            return UM.Theme.getColor("action_button_active_border");
-                        }
-                        else if(control.hovered)
-                        {
-                            return UM.Theme.getColor("action_button_hovered_border");
-                        }
-                        else
-                        {
-                            return UM.Theme.getColor("action_button_border");
-                        }
-                    }
-                    color:
-                    {
-                        if(!control.enabled)
-                        {
-                            return UM.Theme.getColor("action_button_disabled");
-                        }
-                        else if(control.pressed)
-                        {
-                            return UM.Theme.getColor("action_button_active");
-                        }
-                        else if(control.hovered)
-                        {
-                            return UM.Theme.getColor("action_button_hovered");
-                        }
-                        else
-                        {
-                            return UM.Theme.getColor("action_button");
-                        }
-                    }
-                    Behavior on color
-                    {
-                        ColorAnimation
-                        {
-                            duration: 50
-                        }
-                    }
 
-                    Label
-                    {
-                        id: actualLabel
-                        anchors.centerIn: parent
-                        color:
-                        {
-                            if(!control.enabled)
-                            {
-                                return UM.Theme.getColor("action_button_disabled_text");
-                            }
-                            else if(control.pressed)
-                            {
-                                return UM.Theme.getColor("action_button_active_text");
-                            }
-                            else if(control.hovered)
-                            {
-                                return UM.Theme.getColor("action_button_hovered_text");
-                            }
-                            else
-                            {
-                                return UM.Theme.getColor("action_button_text");
-                            }
-                        }
-                        font: UM.Theme.getFont("action_button")
-                        text:
-                        {
-                            if(printerModel == null)
-                            {
-                                return ""
-                            }
-                            if(printerModel.isPreheating )
-                            {
-                                return catalog.i18nc("@button Cancel pre-heating", "Cancel")
-                            } else
-                            {
-                                return catalog.i18nc("@button", "Pre-heat")
-                            }
-                        }
-                    }
+            text:
+            {
+                if (printerModel == null)
+                {
+                    return ""
+                }
+                if (printerModel.isPreheating )
+                {
+                    return catalog.i18nc("@button Cancel pre-heating", "Cancel")
+                }
+                else
+                {
+                    return catalog.i18nc("@button", "Pre-heat")
                 }
             }
 
@@ -356,7 +282,7 @@ Item
                 {
                     base.showTooltip(
                         base,
-                        {x: 0, y: preheatButton.mapToItem(base, 0, 0).y},
+                        { x: 0, y: preheatButton.mapToItem(base, 0, 0).y },
                         catalog.i18nc("@tooltip of pre-heat", "Heat the bed in advance before printing. You can continue adjusting your print while it is heating, and you won't have to wait for the bed to heat up when you're ready to print.")
                     );
                 }

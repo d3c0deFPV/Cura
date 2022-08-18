@@ -1,60 +1,55 @@
-// Copyright (c) 2018 Ultimaker B.V.
+// Copyright (c) 2021 Ultimaker B.V.
 // Cura is released under the terms of the LGPLv3 or higher.
 
-import QtQuick 2.7
-import QtQuick.Controls 1.4
+import QtQuick 2.10
+import QtQuick.Controls 2.11
+import QtQml.Models 2.14 as Models
 
 import UM 1.2 as UM
 import Cura 1.0 as Cura
 
-Menu
+Cura.Menu
 {
+    ActionGroup { id: group }
+
     id: menu
     title: catalog.i18nc("@action:inmenu", "Visible Settings")
 
     property QtObject settingVisibilityPresetsModel: CuraApplication.getSettingVisibilityPresetsModel()
 
-    signal showAllSettings()
+    signal collapseAllCategories()
 
-    Instantiator
+    Models.Instantiator
     {
-        model: settingVisibilityPresetsModel
+        model: settingVisibilityPresetsModel.items
 
-        MenuItem
+        Cura.MenuItem
         {
-            text: model.name
+            text: modelData.name
             checkable: true
-            checked: model.id == settingVisibilityPresetsModel.activePreset
-            exclusiveGroup: group
-            onTriggered:
-            {
-                settingVisibilityPresetsModel.setActivePreset(model.id);
-                showSettingVisibilityProfile();
-            }
+            checked: modelData.presetId == settingVisibilityPresetsModel.activePreset
+            ActionGroup.group: group
+            onTriggered: settingVisibilityPresetsModel.setActivePreset(modelData.presetId)
         }
 
-        onObjectAdded: menu.insertItem(index, object)
-        onObjectRemoved: menu.removeItem(object)
+        onObjectAdded: function(index, object) { menu.insertItem(index, object) }
+        onObjectRemoved: function(index, object) { menu.removeItem(object)}
     }
 
-    MenuSeparator {}
-    MenuItem
+    Cura.MenuSeparator {}
+    Cura.MenuItem
     {
-        text: catalog.i18nc("@action:inmenu", "Show All Settings")
-        checkable: false
-        exclusiveGroup: group
+        text: catalog.i18nc("@action:inmenu", "Collapse All Categories")
         onTriggered:
         {
-            showAllSettings();
+            collapseAllCategories();
         }
     }
-    MenuSeparator {}
-    MenuItem
+    Cura.MenuSeparator {}
+    Cura.MenuItem
     {
         text: catalog.i18nc("@action:inmenu", "Manage Setting Visibility...")
-        iconName: "configure"
+        icon.name: "configure"
         onTriggered: Cura.Actions.configureSettingVisibility.trigger()
     }
-
-    ExclusiveGroup { id: group }
 }

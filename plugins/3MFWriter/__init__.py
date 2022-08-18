@@ -5,25 +5,23 @@ import sys
 from UM.Logger import Logger
 try:
     from . import ThreeMFWriter
+    threemf_writer_was_imported = True
 except ImportError:
     Logger.log("w", "Could not import ThreeMFWriter; libSavitar may be missing")
+    threemf_writer_was_imported = False
+
 from . import ThreeMFWorkspaceWriter
-
 from UM.i18n import i18nCatalog
-from UM.Platform import Platform
 
-i18n_catalog = i18nCatalog("uranium")
+i18n_catalog = i18nCatalog("cura")
+
 
 def getMetaData():
-    # Workarround for osx not supporting double file extensions correctly.
-    if Platform.isOSX():
-        workspace_extension = "3mf"
-    else:
-        workspace_extension = "curaproject.3mf"
+    workspace_extension = "3mf"
 
     metaData = {}
 
-    if "3MFWriter.ThreeMFWriter" in sys.modules:
+    if threemf_writer_was_imported:
         metaData["mesh_writer"] = {
             "output": [{
                 "extension": "3mf",
@@ -36,12 +34,13 @@ def getMetaData():
             "output": [{
                 "extension": workspace_extension,
                 "description": i18n_catalog.i18nc("@item:inlistbox", "Cura Project 3MF file"),
-                "mime_type": "application/x-curaproject+xml",
+                "mime_type": "application/vnd.ms-package.3dmanufacturing-3dmodel+xml",
                 "mode": ThreeMFWorkspaceWriter.ThreeMFWorkspaceWriter.OutputMode.BinaryMode
             }]
         }
 
     return metaData
+
 
 def register(app):
     if "3MFWriter.ThreeMFWriter" in sys.modules:

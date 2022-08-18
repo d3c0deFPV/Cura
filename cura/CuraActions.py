@@ -1,9 +1,9 @@
 # Copyright (c) 2018 Ultimaker B.V.
 # Cura is released under the terms of the LGPLv3 or higher.
 
-from PyQt5.QtCore import QObject, QUrl
-from PyQt5.QtGui import QDesktopServices
-from typing import List, TYPE_CHECKING
+from PyQt6.QtCore import QObject, QUrl
+from PyQt6.QtGui import QDesktopServices
+from typing import List, cast
 
 from UM.Event import CallFunctionEvent
 from UM.FlameProfiler import pyqtSlot
@@ -23,9 +23,8 @@ from cura.Settings.ExtruderManager import ExtruderManager
 from cura.Operations.SetBuildPlateNumberOperation import SetBuildPlateNumberOperation
 
 from UM.Logger import Logger
+from UM.Scene.SceneNode import SceneNode
 
-if TYPE_CHECKING:
-    from UM.Scene.SceneNode import SceneNode
 
 class CuraActions(QObject):
     def __init__(self, parent: QObject = None) -> None:
@@ -36,53 +35,65 @@ class CuraActions(QObject):
         # Starting a web browser from a signal handler connected to a menu will crash on windows.
         # So instead, defer the call to the next run of the event loop, since that does work.
         # Note that weirdly enough, only signal handlers that open a web browser fail like that.
-        event = CallFunctionEvent(self._openUrl, [QUrl("http://ultimaker.com/en/support/software")], {})
+        event = CallFunctionEvent(self._openUrl, [QUrl("https://ultimaker.com/en/resources/manuals/software?utm_source=cura&utm_medium=software&utm_campaign=dropdown-documentation")], {})
         cura.CuraApplication.CuraApplication.getInstance().functionEvent(event)
 
     @pyqtSlot()
     def openBugReportPage(self) -> None:
-        event = CallFunctionEvent(self._openUrl, [QUrl("http://github.com/Ultimaker/Cura/issues")], {})
+        event = CallFunctionEvent(self._openUrl, [QUrl("https://github.com/Ultimaker/Cura/issues/new/choose")], {})
         cura.CuraApplication.CuraApplication.getInstance().functionEvent(event)
 
-    ##  Reset camera position and direction to default
     @pyqtSlot()
     def homeCamera(self) -> None:
+        """Reset camera position and direction to default"""
+
         scene = cura.CuraApplication.CuraApplication.getInstance().getController().getScene()
         camera = scene.getActiveCamera()
         if camera:
-            camera.setPosition(Vector(-80, 250, 700))
+            diagonal_size = cura.CuraApplication.CuraApplication.getInstance().getBuildVolume().getDiagonalSize()
+            camera.setPosition(Vector(-80, 250, 700) * diagonal_size / 375)
             camera.setPerspective(True)
             camera.lookAt(Vector(0, 0, 0))
 
-    ##  Center all objects in the selection
     @pyqtSlot()
     def centerSelection(self) -> None:
+        """Center all objects in the selection"""
+
         operation = GroupedOperation()
         for node in Selection.getAllSelectedObjects():
             current_node = node
-            while current_node.getParent() and current_node.getParent().callDecoration("isGroup"):
-                current_node = current_node.getParent()
+            parent_node = current_node.getParent()
+            while parent_node and parent_node.callDecoration("isGroup"):
+                current_node = parent_node
+                parent_node = current_node.getParent()
 
-            #   This was formerly done with SetTransformOperation but because of
-            #   unpredictable matrix deconstruction it was possible that mirrors
-            #   could manifest as rotations. Centering is therefore done by
-            #   moving the node to negative whatever its position is:
-            center_operation = TranslateOperation(current_node, -current_node._position)
+            # Find out where the bottom of the object is
+            bbox = current_node.getBoundingBox()
+            if bbox:
+                center_y = current_node.getWorldPosition().y - bbox.bottom
+            else:
+                center_y = 0
+
+            # Move the object so that it's bottom is on to of the buildplate
+            center_operation = TranslateOperation(current_node, Vector(0, center_y, 0), set_position = True)
             operation.addOperation(center_operation)
         operation.push()
 
-    ##  Multiply all objects in the selection
-    #
-    #   \param count The number of times to multiply the selection.
     @pyqtSlot(int)
     def multiplySelection(self, count: int) -> None:
+        """Multiply all objects in the selection
+
+        :param count: The number of times to multiply the selection.
+        """
+
         min_offset = cura.CuraApplication.CuraApplication.getInstance().getBuildVolume().getEdgeDisallowedSize() + 2  # Allow for some rounding errors
         job = MultiplyObjectsJob(Selection.getAllSelectedObjects(), count, min_offset = max(min_offset, 8))
         job.start()
 
-    ##  Delete all selected objects.
     @pyqtSlot()
     def deleteSelection(self) -> None:
+        """Delete all selected objects."""
+
         if not cura.CuraApplication.CuraApplication.getInstance().getController().getToolsEnabled():
             return
 
@@ -104,11 +115,13 @@ class CuraActions(QObject):
 
         op.push()
 
-    ##  Set the extruder that should be used to print the selection.
-    #
-    #   \param extruder_id The ID of the extruder stack to use for the selected objects.
     @pyqtSlot(str)
     def setExtruderForSelection(self, extruder_id: str) -> None:
+        """Set the extruder that should be used to print the selection.
+
+        :param extruder_id: The ID of the extruder stack to use for the selected objects.
+        """
+
         operation = GroupedOperation()
 
         nodes_to_change = []
@@ -149,13 +162,13 @@ class CuraActions(QObject):
 
         root = cura.CuraApplication.CuraApplication.getInstance().getController().getScene().getRoot()
 
-        nodes_to_change = []
+        nodes_to_change = []  # type: List[SceneNode]
         for node in Selection.getAllSelectedObjects():
             parent_node = node  # Find the parent node to change instead
             while parent_node.getParent() != root:
-                parent_node = parent_node.getParent()
+                parent_node = cast(SceneNode, parent_node.getParent())
 
-            for single_node in BreadthFirstIterator(parent_node): #type: ignore #Ignore type error because iter() should get called automatically by Python syntax.
+            for single_node in BreadthFirstIterator(parent_node):  # type: ignore #Ignore type error because iter() should get called automatically by Python syntax.
                 nodes_to_change.append(single_node)
 
         if not nodes_to_change:

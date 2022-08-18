@@ -3,7 +3,7 @@
 
 from UM.Settings.ContainerRegistry import ContainerRegistry
 from cura.MachineAction import MachineAction
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, pyqtProperty
+from PyQt6.QtCore import pyqtSlot, pyqtSignal, pyqtProperty
 
 from UM.i18n import i18nCatalog
 from UM.Application import Application
@@ -11,9 +11,12 @@ catalog = i18nCatalog("cura")
 
 from cura.Settings.CuraStackBuilder import CuraStackBuilder
 
-##  The Ultimaker Original can have a few revisions & upgrades. This action helps with selecting them, so they are added
-#   as a variant.
+
 class UMOUpgradeSelection(MachineAction):
+    """The Ultimaker Original can have a few revisions & upgrades.
+    This action helps with selecting them, so they are added as a variant.
+    """
+
     def __init__(self):
         super().__init__("UMOUpgradeSelection", catalog.i18nc("@action", "Select upgrades"))
         self._qml_url = "UMOUpgradeSelectionMachineAction.qml"

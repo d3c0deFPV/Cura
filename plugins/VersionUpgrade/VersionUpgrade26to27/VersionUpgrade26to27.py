@@ -1,11 +1,11 @@
-# Copyright (c) 2017 Ultimaker B.V.
+# Copyright (c) 2018 Ultimaker B.V.
 # Cura is released under the terms of the LGPLv3 or higher.
 
 import configparser #To parse the files we need to upgrade and write the new files.
 import io #To serialise configparser output to a string.
+from typing import Dict, List, Tuple
 
 from UM.VersionUpgrade import VersionUpgrade
-from cura.CuraApplication import CuraApplication
 
 # a dict of renamed quality profiles:  <old_id> : <new_id>
 _renamed_quality_profiles = {
@@ -62,37 +62,20 @@ _renamed_quality_profiles = {
 
     "um3_bb0.8_TPU_Not_Supported_Quality": "um3_bb0.8_TPU_Fast_print",
     "um3_bb0.8_TPU_Not_Supported_Superdraft_Quality": "um3_bb0.8_TPU_Superdraft_Print",
-}
+} # type: Dict[str, str]
+
 
 ##  A collection of functions that convert the configuration of the user in Cura
 #   2.6 to a configuration for Cura 2.7.
 #
 #   All of these methods are essentially stateless.
 class VersionUpgrade26to27(VersionUpgrade):
-    ##  Gets the version number from a CFG file in Uranium's 2.6 format.
-    #
-    #   Since the format may change, this is implemented for the 2.6 format only
-    #   and needs to be included in the version upgrade system rather than
-    #   globally in Uranium.
-    #
-    #   \param serialised The serialised form of a CFG file.
-    #   \return The version number stored in the CFG file.
-    #   \raises ValueError The format of the version number in the file is
-    #   incorrect.
-    #   \raises KeyError The format of the file is incorrect.
-    def getCfgVersion(self, serialised):
-        parser = configparser.ConfigParser(interpolation = None)
-        parser.read_string(serialised)
-        format_version = int(parser.get("general", "version")) #Explicitly give an exception when this fails. That means that the file format is not recognised.
-        setting_version = int(parser.get("metadata", "setting_version", fallback = 0))
-        return format_version * 1000000 + setting_version
-
     ##  Upgrades a preferences file from version 2.6 to 2.7.
     #
     #   \param serialised The serialised form of a preferences file.
     #   \param filename The name of the file to upgrade.
-    def upgradePreferences(self, serialised, filename):
-        parser = configparser.ConfigParser(interpolation=None)
+    def upgradePreferences(self, serialised: str, filename: str) -> Tuple[List[str], List[str]]:
+        parser = configparser.ConfigParser(interpolation = None)
         parser.read_string(serialised)
 
         # Update version numbers
@@ -118,8 +101,8 @@ class VersionUpgrade26to27(VersionUpgrade):
     #
     #   \param serialised The serialised form of a container file.
     #   \param filename The name of the file to upgrade.
-    def upgradeOtherContainer(self, serialised, filename):
-        parser = configparser.ConfigParser(interpolation=None)
+    def upgradeOtherContainer(self, serialised: str, filename: str) -> Tuple[List[str], List[str]]:
+        parser = configparser.ConfigParser(interpolation = None)
         parser.read_string(serialised)
 
         # Update version numbers
@@ -140,7 +123,7 @@ class VersionUpgrade26to27(VersionUpgrade):
     #
     #   \param serialised The serialised form of a container stack.
     #   \param filename The name of the file to upgrade.
-    def upgradeStack(self, serialised, filename):
+    def upgradeStack(self, serialised: str, filename: str) -> Tuple[List[str], List[str]]:
         parser = configparser.ConfigParser(interpolation = None)
         parser.read_string(serialised)
 

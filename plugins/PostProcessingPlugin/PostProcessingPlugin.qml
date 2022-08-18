@@ -1,14 +1,13 @@
-// Copyright (c) 2015 Jaime van Kessel, Ultimaker B.V.
+// Copyright (c) 2022 Jaime van Kessel, Ultimaker B.V.
 // The PostProcessingPlugin is released under the terms of the AGPLv3 or higher.
 
 import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.1
+import QtQuick.Controls 2.15
+import QtQml.Models 2.15 as Models
 import QtQuick.Layouts 1.1
-import QtQuick.Dialogs 1.1
 import QtQuick.Window 2.2
 
-import UM 1.2 as UM
+import UM 1.5 as UM
 import Cura 1.0 as Cura
 
 UM.Dialog
@@ -16,403 +15,383 @@ UM.Dialog
     id: dialog
 
     title: catalog.i18nc("@title:window", "Post Processing Plugin")
-    width: 700 * screenScaleFactor;
-    height: 500 * screenScaleFactor;
-    minimumWidth: 400 * screenScaleFactor;
-    minimumHeight: 250 * screenScaleFactor;
-
+    width: 700 * screenScaleFactor
+    height: 500 * screenScaleFactor
+    minimumWidth: 400 * screenScaleFactor
+    minimumHeight: 250 * screenScaleFactor
+    backgroundColor: UM.Theme.getColor("main_background")
     onVisibleChanged:
     {
-        if(!visible) //Whenever the window is closed (either via the "Close" button or the X on the window frame), we want to update it in the stack.
+        // Whenever the window is closed (either via the "Close" button or the X on the window frame), we want to update it in the stack.
+        if (!visible)
         {
-            manager.writeScriptsToStack();
+            manager.writeScriptsToStack()
         }
     }
 
     Item
     {
-        UM.I18nCatalog{id: catalog; name:"cura"}
+        UM.I18nCatalog{id: catalog; name: "cura"}
         id: base
         property int columnWidth: Math.round((base.width / 2) - UM.Theme.getSize("default_margin").width)
-        property int textMargin: Math.round(UM.Theme.getSize("default_margin").width / 2)
+        property int textMargin: UM.Theme.getSize("narrow_margin").width
         property string activeScriptName
-        SystemPalette{ id: palette }
-        SystemPalette{ id: disabledPalette; colorGroup: SystemPalette.Disabled }
+
         anchors.fill: parent
 
-        ExclusiveGroup
+        ButtonGroup
         {
             id: selectedScriptGroup
         }
-        Item
+        Column
         {
             id: activeScripts
-            anchors.left: parent.left
             width: base.columnWidth
             height: parent.height
 
-            Label
+            spacing: base.textMargin
+
+            UM.Label
             {
                 id: activeScriptsHeader
                 text: catalog.i18nc("@label", "Post Processing Scripts")
-                anchors.top: parent.top
-                anchors.topMargin: base.textMargin
                 anchors.left: parent.left
-                anchors.leftMargin: base.textMargin
                 anchors.right: parent.right
-                anchors.rightMargin: base.textMargin
-                font: UM.Theme.getFont("large")
+                font: UM.Theme.getFont("large_bold")
+                elide: Text.ElideRight
             }
             ListView
             {
                 id: activeScriptsList
-                anchors.top: activeScriptsHeader.bottom
-                anchors.topMargin: base.textMargin
-                anchors.left: parent.left
-                anchors.leftMargin: UM.Theme.getSize("default_margin").width
-                anchors.right: parent.right
-                anchors.rightMargin: base.textMargin
-                height: childrenRect.height
-                model: manager.scriptList
-                delegate: Item
+                anchors
                 {
-                    width: parent.width
-                    height: activeScriptButton.height
-                    Button
+                    left: parent.left
+                    right: parent.right
+                    rightMargin: base.textMargin
+                }
+                height: Math.min(contentHeight, parent.height - parent.spacing * 2 - activeScriptsHeader.height - addButton.height) //At the window height, start scrolling this one.
+
+                clip: true
+                ScrollBar.vertical: UM.ScrollBar
+                {
+                    id: activeScriptsScrollBar
+                }
+                model: manager.scriptList
+
+                delegate: Button
+                {
+                    id: activeScriptButton
+
+                    width: parent.width - activeScriptsScrollBar.width
+                    height: UM.Theme.getSize("standard_list_lineheight").height
+
+                    ButtonGroup.group: selectedScriptGroup
+                    checkable: true
+
+                    checked:
                     {
-                        id: activeScriptButton
-                        text: manager.getScriptLabelByKey(modelData.toString())
-                        exclusiveGroup: selectedScriptGroup
-                        checkable: true
-                        checked: {
-                            if (manager.selectedScriptIndex == index)
-                            {
-                                base.activeScriptName = manager.getScriptLabelByKey(modelData.toString())
-                                return true
-                            }
-                            else
-                            {
-                                return false
-                            }
-                        }
-                        onClicked:
+                        if (manager.selectedScriptIndex == index)
                         {
-                            forceActiveFocus()
-                            manager.setSelectedScriptIndex(index)
                             base.activeScriptName = manager.getScriptLabelByKey(modelData.toString())
+                            return true
                         }
-                        width: parent.width
-                        height: UM.Theme.getSize("setting").height
-                        style: ButtonStyle
+                        else
                         {
-                            background: Rectangle
-                            {
-                                color: activeScriptButton.checked ? palette.highlight : "transparent"
-                                width: parent.width
-                                height: parent.height
-                            }
-                            label: Label
-                            {
-                                wrapMode: Text.Wrap
-                                text: control.text
-                                color: activeScriptButton.checked ? palette.highlightedText : palette.text
-                            }
+                            return false
                         }
                     }
-                    Button
+
+                    background: Rectangle
                     {
-                        id: removeButton
-                        text: "x"
-                        width: 20 * screenScaleFactor
-                        height: 20 * screenScaleFactor
-                        anchors.right:parent.right
-                        anchors.rightMargin: base.textMargin
-                        anchors.verticalCenter: parent.verticalCenter
-                        onClicked: manager.removeScriptByIndex(index)
-                        style: ButtonStyle
-                        {
-                            label: Item
-                            {
-                                UM.RecolorImage
-                                {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: Math.round(control.width / 2.7)
-                                    height: Math.round(control.height / 2.7)
-                                    sourceSize.width: width
-                                    sourceSize.height: width
-                                    color: palette.text
-                                    source: UM.Theme.getIcon("cross1")
-                                }
-                            }
-                        }
+                        color: activeScriptButton.checked ? UM.Theme.getColor("background_3") : "transparent"
                     }
-                    Button
+
+                    onClicked:
                     {
-                        id: downButton
-                        text: ""
-                        anchors.right: removeButton.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        enabled: index != manager.scriptList.length - 1
-                        width: 20 * screenScaleFactor
-                        height: 20 * screenScaleFactor
-                        onClicked:
-                        {
-                            if (manager.selectedScriptIndex == index)
-                            {
-                                manager.setSelectedScriptIndex(index + 1)
-                            }
-                            return manager.moveScript(index, index + 1)
-                        }
-                        style: ButtonStyle
-                        {
-                            label: Item
-                            {
-                                UM.RecolorImage
-                                {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: Math.round(control.width / 2.5)
-                                    height: Math.round(control.height / 2.5)
-                                    sourceSize.width: width
-                                    sourceSize.height: width
-                                    color: control.enabled ? palette.text : disabledPalette.text
-                                    source: UM.Theme.getIcon("arrow_bottom")
-                                }
-                            }
-                        }
+                        forceActiveFocus()
+                        manager.setSelectedScriptIndex(index)
+                        base.activeScriptName = manager.getScriptLabelByKey(modelData.toString())
                     }
-                    Button
+
+                    RowLayout
                     {
-                        id: upButton
-                        text: ""
-                        enabled: index != 0
-                        width: 20 * screenScaleFactor
-                        height: 20 * screenScaleFactor
-                        anchors.right: downButton.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        onClicked:
+                        anchors.fill: parent
+
+                        UM.Label
                         {
-                            if (manager.selectedScriptIndex == index)
-                            {
-                                manager.setSelectedScriptIndex(index - 1)
-                            }
-                            return manager.moveScript(index, index - 1)
+                            Layout.fillWidth: true
+                            text: manager.getScriptLabelByKey(modelData.toString())
                         }
-                        style: ButtonStyle
+
+                        Item
                         {
-                            label: Item
-                             {
-                                UM.RecolorImage
+                            id: downButton
+                            Layout.preferredWidth: height
+                            Layout.fillHeight: true
+                            enabled: index != manager.scriptList.length - 1
+
+                            MouseArea
+                            {
+                                anchors.fill: parent
+                                onClicked:
                                 {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: Math.round(control.width / 2.5)
-                                    height: Math.round(control.height / 2.5)
-                                    sourceSize.width: width
-                                    sourceSize.height: width
-                                    color: control.enabled ? palette.text : disabledPalette.text
-                                    source: UM.Theme.getIcon("arrow_top")
+                                    if (manager.selectedScriptIndex == index)
+                                    {
+                                        manager.setSelectedScriptIndex(index + 1)
+                                    }
+                                    return manager.moveScript(index, index + 1)
                                 }
+                            }
+
+                            UM.ColorImage
+                            {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: UM.Theme.getSize("standard_arrow").width
+                                height: UM.Theme.getSize("standard_arrow").height
+                                color: parent.enabled ? UM.Theme.getColor("text") : UM.Theme.getColor("text_disabled")
+                                source: UM.Theme.getIcon("ChevronSingleDown")
+                            }
+                        }
+                        Item
+                        {
+                            id: upButton
+                            Layout.preferredWidth: height
+                            Layout.fillHeight: true
+                            enabled: index != 0
+
+                            MouseArea
+                            {
+                                anchors.fill: parent
+                                onClicked:
+                                {
+                                    if (manager.selectedScriptIndex == index)
+                                    {
+                                        manager.setSelectedScriptIndex(index - 1)
+                                    }
+                                    return manager.moveScript(index, index - 1)
+                                }
+                            }
+
+                            UM.ColorImage
+                            {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: UM.Theme.getSize("standard_arrow").width
+                                height: UM.Theme.getSize("standard_arrow").height
+                                color: upButton.enabled ? UM.Theme.getColor("text") : UM.Theme.getColor("text_disabled")
+                                source: UM.Theme.getIcon("ChevronSingleUp")
+                            }
+                        }
+
+                        Item
+                        {
+                            id: removeButton
+                            Layout.preferredWidth: height
+                            Layout.fillHeight: true
+
+                            MouseArea
+                            {
+                                anchors.fill: parent
+                                onClicked: manager.removeScriptByIndex(index)
+                            }
+
+                            UM.ColorImage
+                            {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: UM.Theme.getSize("standard_arrow").width
+                                height: UM.Theme.getSize("standard_arrow").height
+                                color: UM.Theme.getColor("text")
+                                source: UM.Theme.getIcon("Cancel")
                             }
                         }
                     }
                 }
             }
-            Button
+            Cura.SecondaryButton
             {
                 id: addButton
                 text: catalog.i18nc("@action", "Add a script")
-                anchors.left: parent.left
-                anchors.leftMargin: base.textMargin
-                anchors.top: activeScriptsList.bottom
-                anchors.topMargin: base.textMargin
-                menu: scriptsMenu
-                style: ButtonStyle
-                {
-                    label: Label
-                    {
-                        text: control.text
-                    }
-                }
+                onClicked: scriptsMenu.open()
             }
-            Menu
+        }
+
+        Cura.Menu
+        {
+            id: scriptsMenu
+
+            Models.Instantiator
             {
-                id: scriptsMenu
+                model: manager.loadedScriptList
 
-                Instantiator
+                Cura.MenuItem
                 {
-                    model: manager.loadedScriptList
-
-                    MenuItem
-                    {
-                        text: manager.getScriptLabelByKey(modelData.toString())
-                        onTriggered: manager.addScriptToList(modelData.toString())
-                    }
-
-                    onObjectAdded: scriptsMenu.insertItem(index, object);
-                    onObjectRemoved: scriptsMenu.removeItem(object);
+                    text: manager.getScriptLabelByKey(modelData.toString())
+                    onTriggered: manager.addScriptToList(modelData.toString())
                 }
+
+                onObjectAdded: function(index, object) { scriptsMenu.insertItem(index, object)}
+                onObjectRemoved: function(index, object) {  scriptsMenu.removeItem(object) }
             }
         }
 
         Rectangle
         {
-            color: UM.Theme.getColor("sidebar")
+            color: UM.Theme.getColor("main_background")
             anchors.left: activeScripts.right
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
             anchors.right: parent.right
             height: parent.height
             id: settingsPanel
 
-            Label
+            UM.Label
             {
                 id: scriptSpecsHeader
                 text: manager.selectedScriptIndex == -1 ? catalog.i18nc("@label", "Settings") : base.activeScriptName
-                anchors.top: parent.top
-                anchors.topMargin: base.textMargin
-                anchors.left: parent.left
-                anchors.leftMargin: base.textMargin
-                anchors.right: parent.right
-                anchors.rightMargin: base.textMargin
+                anchors
+                {
+                    top: parent.top
+                    topMargin: base.textMargin
+                    left: parent.left
+                    leftMargin: base.textMargin
+                    right: parent.right
+                    rightMargin: base.textMargin
+                }
+
+                elide: Text.ElideRight
                 height: 20 * screenScaleFactor
-                font: UM.Theme.getFont("large")
-                color: UM.Theme.getColor("text")
+                font: UM.Theme.getFont("large_bold")
             }
 
-            ScrollView
+            ListView
             {
-                id: scrollView
-                anchors.top: scriptSpecsHeader.bottom
-                anchors.topMargin: settingsPanel.textMargin
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                visible: manager.selectedScriptDefinitionId != ""
-                style: UM.Theme.styles.scrollview;
-
-                ListView
+                id: listview
+                anchors
                 {
-                    id: listview
-                    spacing: UM.Theme.getSize("default_lining").height
-                    model: UM.SettingDefinitionsModel
+                    top: scriptSpecsHeader.bottom
+                    topMargin: settingsPanel.textMargin
+                    left: parent.left
+                    leftMargin: UM.Theme.getSize("default_margin").width
+                    right: parent.right
+                    bottom: parent.bottom
+                }
+
+                ScrollBar.vertical: UM.ScrollBar {}
+                clip: true
+                visible: manager.selectedScriptDefinitionId != ""
+                spacing: UM.Theme.getSize("default_lining").height
+
+                model: UM.SettingDefinitionsModel
+                {
+                    id: definitionsModel
+                    containerId: manager.selectedScriptDefinitionId
+                    onContainerIdChanged: definitionsModel.setAllVisible(true)
+                    showAll: true
+                }
+
+                delegate: Loader
+                {
+                    id: settingLoader
+
+                    width: listview.width
+                    height:
                     {
-                        id: definitionsModel;
-                        containerId: manager.selectedScriptDefinitionId
-                        showAll: true
+                        if (provider.properties.enabled == "True" && model.type != undefined)
+                        {
+                            return UM.Theme.getSize("section").height;
+                        }
+                        else
+                        {
+                            return 0
+                        }
                     }
-                    delegate:Loader
+                    Behavior on height { NumberAnimation { duration: 100 } }
+                    opacity: provider.properties.enabled == "True" ? 1 : 0
+
+                    Behavior on opacity { NumberAnimation { duration: 100 } }
+                    enabled: opacity > 0
+
+                    property var definition: model
+                    property var settingDefinitionsModel: definitionsModel
+                    property var propertyProvider: provider
+                    property var globalPropertyProvider: inheritStackProvider
+
+                    //Qt5.4.2 and earlier has a bug where this causes a crash: https://bugreports.qt.io/browse/QTBUG-35989
+                    //In addition, while it works for 5.5 and higher, the ordering of the actual combo box drop down changes,
+                    //causing nasty issues when selecting different options. So disable asynchronous loading of enum type completely.
+                    asynchronous: model.type != "enum" && model.type != "extruder"
+
+                    onLoaded:
                     {
-                        id: settingLoader
+                        settingLoader.item.showRevertButton = false
+                        settingLoader.item.showInheritButton = false
+                        settingLoader.item.showLinkedSettingIcon = false
+                        settingLoader.item.doDepthIndentation = false
+                        settingLoader.item.doQualityUserSettingEmphasis = false
+                    }
 
-                        width: parent.width
-                        height:
+                    sourceComponent:
+                    {
+                        switch(model.type)
                         {
-                            if(provider.properties.enabled == "True")
-                            {
-                                if(model.type != undefined)
-                                {
-                                    return UM.Theme.getSize("section").height;
-                                }
-                                else
-                                {
-                                    return 0;
-                                }
-                            }
-                            else
-                            {
-                                return 0;
-                            }
-
+                            case "int":
+                                return settingTextField
+                            case "float":
+                                return settingTextField
+                            case "enum":
+                                return settingComboBox
+                            case "extruder":
+                                return settingExtruder
+                            case "bool":
+                                return settingCheckBox
+                            case "str":
+                                return settingTextField
+                            case "category":
+                                return settingCategory
+                            default:
+                                return settingUnknown
                         }
-                        Behavior on height { NumberAnimation { duration: 100 } }
-                        opacity: provider.properties.enabled == "True" ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: 100 } }
-                        enabled: opacity > 0
-                        property var definition: model
-                        property var settingDefinitionsModel: definitionsModel
-                        property var propertyProvider: provider
-                        property var globalPropertyProvider: inheritStackProvider
+                    }
 
-                        //Qt5.4.2 and earlier has a bug where this causes a crash: https://bugreports.qt.io/browse/QTBUG-35989
-                        //In addition, while it works for 5.5 and higher, the ordering of the actual combo box drop down changes,
-                        //causing nasty issues when selecting different options. So disable asynchronous loading of enum type completely.
-                        asynchronous: model.type != "enum" && model.type != "extruder"
+                    UM.SettingPropertyProvider
+                    {
+                        id: provider
+                        containerStackId: manager.selectedScriptStackId
+                        key: model.key ? model.key : "None"
+                        watchedProperties: [ "value", "enabled", "state", "validationState" ]
+                        storeIndex: 0
+                    }
 
-                        onLoaded: {
-                            settingLoader.item.showRevertButton = false
-                            settingLoader.item.showInheritButton = false
-                            settingLoader.item.showLinkedSettingIcon = false
-                            settingLoader.item.doDepthIndentation = true
-                            settingLoader.item.doQualityUserSettingEmphasis = false
-                        }
+                    // Specialty provider that only watches global_inherits (we can't filter on what property changed we get events
+                    // so we bypass that to make a dedicated provider).
+                    UM.SettingPropertyProvider
+                    {
+                        id: inheritStackProvider
+                        containerStack: Cura.MachineManager.activeMachine
+                        key: model.key ? model.key : "None"
+                        watchedProperties: [ "limit_to_extruder" ]
+                    }
 
-                        sourceComponent:
+                    Connections
+                    {
+                        target: item
+
+                        function onShowTooltip(text)
                         {
-                            switch(model.type)
-                            {
-                                case "int":
-                                    return settingTextField
-                                case "float":
-                                    return settingTextField
-                                case "enum":
-                                    return settingComboBox
-                                case "extruder":
-                                    return settingExtruder
-                                case "bool":
-                                    return settingCheckBox
-                                case "str":
-                                    return settingTextField
-                                case "category":
-                                    return settingCategory
-                                default:
-                                    return settingUnknown
-                            }
+                            tooltip.text = text;
+                            var position = settingLoader.mapToItem(settingsPanel, settingsPanel.x, 0);
+                            tooltip.show(position);
+                            tooltip.target.x = position.x + 1;
                         }
 
-                        UM.SettingPropertyProvider
-                        {
-                            id: provider
-                            containerStackId: manager.selectedScriptStackId
-                            key: model.key ? model.key : "None"
-                            watchedProperties: [ "value", "enabled", "state", "validationState" ]
-                            storeIndex: 0
-                        }
-
-                        // Specialty provider that only watches global_inherits (we cant filter on what property changed we get events
-                        // so we bypass that to make a dedicated provider).
-                        UM.SettingPropertyProvider
-                        {
-                            id: inheritStackProvider
-                            containerStackId: Cura.MachineManager.activeMachineId
-                            key: model.key ? model.key : "None"
-                            watchedProperties: [ "limit_to_extruder" ]
-                        }
-
-                        Connections
-                        {
-                            target: item
-
-                            onShowTooltip:
-                            {
-                                tooltip.text = text;
-                                var position = settingLoader.mapToItem(settingsPanel, settingsPanel.x, 0);
-                                tooltip.show(position);
-                                tooltip.target.x = position.x + 1
-                            }
-
-                            onHideTooltip:
-                            {
-                                tooltip.hide();
-                            }
-                        }
-
+                        function onHideTooltip() { tooltip.hide() }
                     }
                 }
             }
         }
 
-        Cura.SidebarTooltip
+        Cura.PrintSetupTooltip
         {
             id: tooltip
         }
@@ -459,51 +438,58 @@ UM.Dialog
             Cura.SettingUnknown { }
         }
     }
-    rightButtons: Button
+
+    rightButtons: Cura.TertiaryButton
     {
         text: catalog.i18nc("@action:button", "Close")
-        iconName: "dialog-close"
         onClicked: dialog.accept()
     }
 
-    Button {
+    Item
+    {
         objectName: "postProcessingSaveAreaButton"
         visible: activeScriptsList.count > 0
-        height: UM.Theme.getSize("save_button_save_to_button").height
+        height: UM.Theme.getSize("action_button").height
         width: height
-        tooltip: catalog.i18nc("@info:tooltip", "Change active post-processing scripts")
-        onClicked: dialog.show()
 
-        style: ButtonStyle {
-            background: Rectangle {
-                id: deviceSelectionIcon
-                border.width: UM.Theme.getSize("default_lining").width
-                border.color: !control.enabled ? UM.Theme.getColor("action_button_disabled_border") :
-                                  control.pressed ? UM.Theme.getColor("action_button_active_border") :
-                                  control.hovered ? UM.Theme.getColor("action_button_hovered_border") : UM.Theme.getColor("action_button_border")
-                color: !control.enabled ? UM.Theme.getColor("action_button_disabled") :
-                           control.pressed ? UM.Theme.getColor("action_button_active") :
-                           control.hovered ? UM.Theme.getColor("action_button_hovered") : UM.Theme.getColor("action_button")
-                Behavior on color { ColorAnimation { duration: 50; } }
-                anchors.left: parent.left
-                anchors.leftMargin: Math.round(UM.Theme.getSize("save_button_text_margin").width / 2);
-                width: parent.height
-                height: parent.height
-
-                UM.RecolorImage {
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: Math.round(parent.width / 2)
-                    height: Math.round(parent.height / 2)
-                    sourceSize.width: width
-                    sourceSize.height: height
-                    color: !control.enabled ? UM.Theme.getColor("action_button_disabled_text") :
-                               control.pressed ? UM.Theme.getColor("action_button_active_text") :
-                               control.hovered ? UM.Theme.getColor("action_button_hovered_text") : UM.Theme.getColor("action_button_text");
-                    source: "postprocessing.svg"
+        Cura.SecondaryButton
+        {
+            height: UM.Theme.getSize("action_button").height
+            tooltip:
+            {
+                var tipText = catalog.i18nc("@info:tooltip", "Change active post-processing scripts.");
+                if (activeScriptsList.count > 0)
+                {
+                    tipText += "<br><br>" + catalog.i18ncp("@info:tooltip",
+                        "The following script is active:",
+                        "The following scripts are active:",
+                        activeScriptsList.count
+                    ) + "<ul>";
+                    for(var i = 0; i < activeScriptsList.count; i++)
+                    {
+                        tipText += "<li>" + manager.getScriptLabelByKey(manager.scriptList[i]) + "</li>";
+                    }
+                    tipText += "</ul>";
                 }
+                return tipText
             }
-            label: Label{ }
+            toolTipContentAlignment: UM.Enums.ContentAlignment.AlignLeft
+            onClicked: dialog.show()
+            iconSource: Qt.resolvedUrl("Script.svg")
+            fixedWidthMode: false
+        }
+
+        Cura.NotificationIcon
+        {
+            id: activeScriptCountIcon
+            visible: activeScriptsList.count > 0
+            anchors
+            {
+                horizontalCenter: parent.right
+                verticalCenter: parent.top
+            }
+
+            labelText: activeScriptsList.count
         }
     }
 }

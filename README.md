@@ -1,52 +1,64 @@
-Cura
-====
-This is the new, shiny frontend for Cura. Check [daid/LegacyCura](https://github.com/daid/LegacyCura) for the legacy Cura that everyone knows and loves/hates. We re-worked the whole GUI code at Ultimaker, because the old code started to become unmaintainable.
+# Cura
 
-Logging Issues
-------------
+<p align="center">
+    <a href="https://github.com/Ultimaker/Cura/actions/workflows/unit-test.yml" alt="Unit Tests">
+        <img src="https://github.com/Ultimaker/Cura/actions/workflows/unit-test.yml/badge.svg" /></a>
+    <a href="https://github.com/Ultimaker/Cura/actions/workflows/conan-package.yml" alt="Unit Tests">
+        <img src="https://github.com/Ultimaker/Cura/actions/workflows/conan-package.yml/badge.svg" /></a>
+    <a href="https://github.com/Ultimaker/Cura/issues" alt="Open Issues">
+        <img src="https://img.shields.io/github/issues/ultimaker/cura" /></a>
+    <a href="https://github.com/Ultimaker/Cura/issues?q=is%3Aissue+is%3Aclosed" alt="Closed Issues">
+        <img src="https://img.shields.io/github/issues-closed/ultimaker/cura?color=g" /></a>
+    <a href="https://github.com/Ultimaker/Cura/pulls" alt="Pull Requests">
+        <img src="https://img.shields.io/github/issues-pr/ultimaker/cura" /></a>
+    <a href="https://github.com/Ultimaker/Cura/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/ultimaker/cura" /></a>
+    <a href="https://github.com/Ultimaker/Cura" alt="Repo Size">
+        <img src="https://img.shields.io/github/repo-size/ultimaker/cura?style=flat" /></a>
+    <a href="https://github.com/Ultimaker/Cura/blob/master/LICENSE" alt="License">
+        <img src="https://img.shields.io/github/license/ultimaker/cura?style=flat" /></a>
+</p>
+
+Ultimaker Cura is a state-of-the-art slicer application to prepare your 3D models for printing with a 3D printer. With hundreds of settings
+and hundreds of community-managed print profiles, Ultimaker Cura is sure to lead your next project to a success.
+
+![Screenshot](cura-logo.PNG)
+
+## Logging Issues
+
 For crashes and similar issues, please attach the following information:
 
 * (On Windows) The log as produced by dxdiag (start -> run -> dxdiag -> save output)
 * The Cura GUI log file, located at
-  * `%APPDATA%\cura\<Cura version>\cura.log` (Windows), or usually `C:\Users\\<your username>\AppData\Roaming\cura\<Cura version>\cura.log`
-  * `$USER/Library/Application Support/cura/<Cura version>/cura.log` (OSX)
-  * `$USER/.local/share/cura/<Cura version>/cura.log` (Ubuntu/Linux)
+    * `%APPDATA%\cura\<Cura version>\cura.log` (Windows), or usually `C:\Users\<your username>\AppData\Roaming\cura\<Cura version>\cura.log`
+    * `$HOME/Library/Application Support/cura/<Cura version>/cura.log` (OSX)
+    * `$HOME/.local/share/cura/<Cura version>/cura.log` (Ubuntu/Linux)
 
-If the Cura user interface still starts, you can also reach this directory from the application menu in Help -> Show settings folder
+If the Cura user interface still starts, you can also reach this directory from the application menu in Help -> Show settings folder.
+An alternative is to install the [ExtensiveSupportLogging plugin](https://marketplace.ultimaker.com/app/cura/plugins/UltimakerPackages/ExtensiveSupportLogging)
+this creates a zip folder of the relevant log files. If you're experiencing performance issues, we might ask you to connect the CPU profiler
+in this plugin and attach the collected data to your support ticket. 
 
-For additional support, you could also ask in the #cura channel on FreeNode IRC. For help with development, there is also the #cura-dev channel.
-
-Dependencies
-------------
-* [Uranium](https://github.com/Ultimaker/Uranium) Cura is built on top of the Uranium framework.
-* [CuraEngine](https://github.com/Ultimaker/CuraEngine) This will be needed at runtime to perform the actual slicing.
-* [PySerial](https://github.com/pyserial/pyserial) Only required for USB printing support.
-* [python-zeroconf](https://github.com/jstasiak/python-zeroconf) Only required to detect mDNS-enabled printers
-
-Build scripts
--------------
-Please checkout [cura-build](https://github.com/Ultimaker/cura-build) for detailed building instructions.
-
-Running from Source
--------------
+## Running from Source
 Please check our [Wiki page](https://github.com/Ultimaker/Cura/wiki/Running-Cura-from-Source) for details about running Cura from source.
 
-Plugins
--------------
+## Plugins
 Please check our [Wiki page](https://github.com/Ultimaker/Cura/wiki/Plugin-Directory) for details about creating and using plugins.
 
-Supported printers
--------------
-Please check our [Wiki page](https://github.com/Ultimaker/Cura/wiki/Adding-new-machine-profiles-to-Cura) for guidelines about adding support for new machines.
+## Supported printers
+Please check our [Wiki page](https://github.com/Ultimaker/Cura/wiki/Adding-new-machine-profiles-to-Cura) for guidelines about adding support
+for new machines.
 
-Configuring Cura
-----------------
+## Configuring Cura
 Please check out [Wiki page](https://github.com/Ultimaker/Cura/wiki/Cura-Settings) about configuration options for developers.
 
-Translating Cura
-----------------
+## Translating Cura
 Please check out [Wiki page](https://github.com/Ultimaker/Cura/wiki/Translating-Cura) about how to translate Cura into other languages.
 
-License
-----------------
-Cura is released under the terms of the LGPLv3 or higher. A copy of this license should be included with the software.
+## License
+![License](https://img.shields.io/github/license/ultimaker/cura?style=flat)  
+Cura is released under terms of the LGPLv3 or higher. A copy of this license should be included with the software. Terms of the license can be found in the LICENSE file. Or at
+http://www.gnu.org/licenses/lgpl.html
+
+> But in general it boils down to:  
+> **You need to share the source of any Cura modifications**

@@ -1,26 +1,35 @@
-// Copyright (c) 2016 Ultimaker B.V.
-// Uranium is released under the terms of the LGPLv3 or higher.
+// Copyright (c) 2022 Ultimaker B.V.
+// Cura is released under the terms of the LGPLv3 or higher.
 
 import QtQuick 2.7
 import QtQuick.Controls 2.0
 
-import UM 1.1 as UM
-import Cura 1.0 as Cura
+import UM 1.5 as UM
+import Cura 1.5 as Cura
 
 SettingItem
 {
     id: base
     property var focusItem: control
 
-    contents: ComboBox
+    // Somehow if we directory set control.model to CuraApplication.getExtrudersModelWithOptional()
+    // and in the Connections.onModelChanged use control.model as a reference, it will complain about
+    // non-existing properties such as "onModelChanged" and "getItem". I guess if we access the model
+    // via "control.model", it gives back a generic/abstract model instance. To avoid this, we add
+    // this extra property to keep the ExtrudersModel and use this in the rest of the code.
+    property var extrudersWithOptionalModel: CuraApplication.getExtrudersModelWithOptional()
+
+    contents: Cura.ComboBox
     {
         id: control
         anchors.fill: parent
 
-        model: Cura.ExtrudersModel
+        model: base.extrudersWithOptionalModel
+
+        Connections
         {
-            onModelChanged: control.color = getItem(control.currentIndex).color
-            addOptionalExtruder: true
+            target: base.extrudersWithOptionalModel
+            function onModelChanged() { control.color = base.extrudersWithOptionalModel.getItem(control.currentIndex).color }
         }
 
         textRole: "name"
@@ -31,12 +40,15 @@ SettingItem
             {
                 forceActiveFocus();
                 propertyProvider.setPropertyValue("value", model.getItem(index).index);
-            } else
+            }
+            else
             {
                 if (propertyProvider.properties.value == -1)
                 {
-                    control.currentIndex = model.rowCount() - 1;  // we know the last item is "Not overriden"
-                } else {
+                    control.currentIndex = model.count - 1;  // we know the last item is "Not overridden"
+                }
+                else
+                {
                     control.currentIndex = propertyProvider.properties.value;  // revert to the old value
                 }
             }
@@ -76,14 +88,7 @@ SettingItem
             when: control.model.items.length > 0
         }
 
-        MouseArea
-        {
-            anchors.fill: parent
-            acceptedButtons: Qt.NoButton
-            onWheel: wheel.accepted = true;
-        }
-
-        property string color: "#fff"
+        property string color: "transparent"
 
         Binding
         {
@@ -91,54 +96,56 @@ SettingItem
             // explicit binding here otherwise we do not handle value changes after the model changes.
             target: control
             property: "color"
-            value: control.currentText != "" ? control.model.getItem(control.currentIndex).color : ""
+            value: control.currentText != "" ? control.model.getItem(control.currentIndex).color : "transparent"
         }
 
-        indicator: UM.RecolorImage
+        indicator: UM.ColorImage
         {
             id: downArrow
             x: control.width - width - control.rightPadding
             y: control.topPadding + Math.round((control.availableHeight - height) / 2)
 
-            source: UM.Theme.getIcon("arrow_bottom")
+            source: UM.Theme.getIcon("ChevronSingleDown")
             width: UM.Theme.getSize("standard_arrow").width
             height: UM.Theme.getSize("standard_arrow").height
-            sourceSize.width: width + 5 * screenScaleFactor
-            sourceSize.height: width + 5 * screenScaleFactor
 
-            color: UM.Theme.getColor("setting_control_text");
+            color: UM.Theme.getColor("setting_control_button")
         }
 
-        background: Rectangle
+        background: UM.UnderlineBackground
         {
             color:
             {
                 if (!enabled)
                 {
-                    return UM.Theme.getColor("setting_control_disabled");
+                    return UM.Theme.getColor("setting_control_disabled")
                 }
-                if (control.hovered || control.activeFocus)
+                if (control.hovered || base.activeFocus)
                 {
-                    return UM.Theme.getColor("setting_control_highlight");
+                    return UM.Theme.getColor("setting_control_highlight")
                 }
-                return UM.Theme.getColor("setting_control");
+                return UM.Theme.getColor("setting_control")
             }
-            border.width: UM.Theme.getSize("default_lining").width
-            border.color:
+            borderColor: control.activeFocus ? UM.Theme.getColor("text_field_border_active") : "transparent"
+            liningColor:
             {
-                if (!enabled)
+                if(!enabled)
                 {
-                    return UM.Theme.getColor("setting_control_disabled_border")
+                    return UM.Theme.getColor("setting_control_disabled_border");
                 }
-                if (control.hovered || control.activeFocus)
+                if(control.activeFocus)
                 {
-                    return UM.Theme.getColor("setting_control_border_highlight")
+                    return UM.Theme.getColor("text_field_border_active");
                 }
-                return UM.Theme.getColor("setting_control_border")
+                if(base.hovered)
+                {
+                    return UM.Theme.getColor("text_field_border_hovered");
+                }
+                return UM.Theme.getColor("border_field_light");
             }
         }
 
-        contentItem: Label
+        contentItem: UM.Label
         {
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
@@ -147,44 +154,40 @@ SettingItem
             rightPadding: swatch.width + UM.Theme.getSize("setting_unit_margin").width
 
             text: control.currentText
-            renderType: Text.NativeRendering
-            font: UM.Theme.getFont("default")
+            textFormat: Text.PlainText
             color: enabled ? UM.Theme.getColor("setting_control_text") : UM.Theme.getColor("setting_control_disabled_text")
 
             elide: Text.ElideRight
-            verticalAlignment: Text.AlignVCenter
 
             background: Rectangle
             {
                 id: swatch
-                height: Math.round(UM.Theme.getSize("setting_control").height / 2)
+                height: UM.Theme.getSize("standard_arrow").width
                 width: height
-
+                radius: Math.round(width / 2)
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Math.round(UM.Theme.getSize("default_margin").width / 4)
-
-                border.width: UM.Theme.getSize("default_lining").width
-                border.color: enabled ? UM.Theme.getColor("setting_control_border") : UM.Theme.getColor("setting_control_disabled_border")
-                radius: Math.round(width / 2)
+                anchors.rightMargin: UM.Theme.getSize("thin_margin").width
 
                 color: control.color
             }
         }
 
-        popup: Popup {
+        popup: Popup
+        {
             y: control.height - UM.Theme.getSize("default_lining").height
             width: control.width
             implicitHeight: contentItem.implicitHeight + 2 * UM.Theme.getSize("default_lining").width
             padding: UM.Theme.getSize("default_lining").width
 
-            contentItem: ListView {
-                clip: true
+            contentItem: ListView
+            {
                 implicitHeight: contentHeight
+
+                ScrollBar.vertical: UM.ScrollBar {}
+                clip: true
                 model: control.popup.visible ? control.delegateModel : null
                 currentIndex: control.highlightedIndex
-
-                ScrollIndicator.vertical: ScrollIndicator { }
             }
 
             background: Rectangle {
@@ -199,40 +202,34 @@ SettingItem
             height: control.height
             highlighted: control.highlightedIndex == index
 
-            contentItem: Label
+            contentItem: UM.Label
             {
                 anchors.fill: parent
                 anchors.leftMargin: UM.Theme.getSize("setting_unit_margin").width
                 anchors.rightMargin: UM.Theme.getSize("setting_unit_margin").width
 
                 text: model.name
-                renderType: Text.NativeRendering
+                textFormat: Text.PlainText
                 color:
                 {
                     if (model.enabled) {
                         UM.Theme.getColor("setting_control_text")
                     } else {
-                        UM.Theme.getColor("action_button_disabled_text");
+                        UM.Theme.getColor("action_button_disabled_text")
                     }
                 }
-                font: UM.Theme.getFont("default")
                 elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
                 rightPadding: swatch.width + UM.Theme.getSize("setting_unit_margin").width
 
                 background: Rectangle
                 {
                     id: swatch
-                    height: Math.round(UM.Theme.getSize("setting_control").height / 2)
+                    height: Math.round(parent.height / 2)
                     width: height
-
+                    radius: Math.round(width / 2)
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    anchors.margins: Math.round(UM.Theme.getSize("default_margin").width / 4)
-
-                    border.width: UM.Theme.getSize("default_lining").width
-                    border.color: enabled ? UM.Theme.getColor("setting_control_border") : UM.Theme.getColor("setting_control_disabled_border")
-                    radius: Math.round(width / 2)
+                    anchors.rightMargin: UM.Theme.getSize("thin_margin").width
 
                     color: control.model.getItem(index).color
                 }
@@ -241,7 +238,6 @@ SettingItem
             background: Rectangle
             {
                 color: parent.highlighted ? UM.Theme.getColor("setting_control_highlight") : "transparent"
-                border.color: parent.highlighted ? UM.Theme.getColor("setting_control_border_highlight") : "transparent"
             }
         }
     }
